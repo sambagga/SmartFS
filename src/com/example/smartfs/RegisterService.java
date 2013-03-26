@@ -54,10 +54,14 @@ import android.util.Log;
 public class RegisterService extends Thread{
 
     public final static String TAG = "RegisterService";
-    String type,id;
-    public RegisterService(String type, String devID){
+    String type,id,name,phoneNo;
+    JmDNS mJmDNS;
+    public RegisterService(JmDNS mJmDNS, String type, String devID,String username,String phoneNo){
     	this.type = type;
-    	id = devID;
+    	this.id = devID;
+    	this.name = username;
+    	this.phoneNo = phoneNo;
+    	this.mJmDNS = mJmDNS;
     }
     /**
      * @param args
@@ -67,24 +71,23 @@ public class RegisterService extends Thread{
         
         try {
             Log.i(TAG,"Opening JmDNS...");
-            JmDNS jmdns = JmDNS.create();
             Log.i(TAG,"Opened JmDNS!");
             Random random = new Random();
-            String name = "sam";
             
             final HashMap<String, String> values = new HashMap<String, String>();
-            values.put("DvNm", "Android-" + id);
+            values.put("DvNm", id);
             values.put("RemV", "10000");
             values.put("DvTy", "Android");
             values.put("RemN", "Remote");
             values.put("txtvers", "1");
+            values.put("PhoneNo", phoneNo);
             byte[] pair = new byte[8];
             random.nextBytes(pair);
             values.put("Pair", toHex(pair));
             
             Log.i(TAG,"Requesting pairing for " + name);
             SmartFS.setServiceInfo(ServiceInfo.create(type, name, 1025, 0, 0, values));
-            jmdns.registerService(SmartFS.getServiceInfo());
+            mJmDNS.registerService(SmartFS.getServiceInfo());
 
             Log.i(TAG,"\nRegistered Service as " + SmartFS.getServiceInfo());
             while(true){}

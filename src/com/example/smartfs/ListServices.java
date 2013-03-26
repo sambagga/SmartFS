@@ -35,24 +35,18 @@ public class ListServices extends Thread{
      *            the command line arguments
      */
 	String type;
-	public ListServices( String type) {
+	JmDNS mJmDNS;
+	public ListServices(JmDNS mJmDNS,  String type) {
 		// TODO Auto-generated constructor stub
 		this.type = type;
+		this.mJmDNS = mJmDNS;
 	}
 	
     public void run() {        
-        JmDNS jmdns = null;
-        try {
         	Log.i(TAG,"Opening JmDNS...");
-            jmdns = JmDNS.create();
             Log.i(TAG,"Opened JmDNS!");
             Log.i(TAG,"Getting List...");
-            SmartFS.list = jmdns.list(type);
+            SmartFS.list = mJmDNS.list(type);
             Log.i(TAG,"Got the List of Devices!");
-            if (jmdns != null) 
-            	jmdns.close();
-            } catch (IOException e) {
-            e.printStackTrace();
-        } 
     }
 }
