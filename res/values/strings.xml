@@ -6,4 +6,6 @@
     <string name="menu_settings">Settings</string>
 	<string name="list_dev">List Devices</string>
 	<string name="transfering_data">Transfering data</string>
+	<string name="pick_file">Pick File</string>
+	<string name="pick_folder">Pick Folder</string>
 </resources>

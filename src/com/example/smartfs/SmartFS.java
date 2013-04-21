@@ -22,6 +22,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -48,6 +49,7 @@ public class SmartFS extends Activity {
 	String devID, phoneNo;
 	String userId;
 	String TAG = "SmartFS";
+	String folderPath;
 	InetAddress hostName;
 	ServerSocket serverSocket; /* serverSocket.get */
 	ListView listV;
@@ -122,7 +124,7 @@ public class SmartFS extends Activity {
 
 					initiateTwoButtonAlert("Pair Code " + pairKey, "Yes", "No",
 							ipStr, pairto, pairKey, pairingID/* Phone no */);
-
+					
 					Log.i("Requesting connection to " + id + " device",
 							s.getPropertyString("PhoneNo"));
 				} else {
@@ -173,7 +175,7 @@ public class SmartFS extends Activity {
 						new DialogInterface.OnClickListener() {
 
 							public void onClick(DialogInterface arg0, int arg1) {
-
+								Log.i("Dialog","Clicked Yes");
 								// Already Received his Directory List?
 								boolean otherPairapproved = false;
 								PairedNode temp = null;
@@ -189,6 +191,7 @@ public class SmartFS extends Activity {
 								if (otherPairapproved == true) {
 									temp.selfPairApproved = true;
 									temp.setPaired();
+									Log.i("Dialog","Verified, Display Folders");
 									//Show temp.pairedDirectory; : Todo
 									
 									//Populate the list of directory: Todo			
@@ -201,7 +204,6 @@ public class SmartFS extends Activity {
 									newPair.selfPairApproved = true;
 									pairedList.add(newPair);
 								}
-								finish();
 							}
 						}).setNegativeButton(negativeButtonText, null).show();
 
@@ -215,7 +217,11 @@ public class SmartFS extends Activity {
 
 	private void sendDirectoryView(InetAddress ip, String port, int pairKey,
 			String pairingID/* Phone No. */) {
-
+		
+		Intent intent = new Intent(getBaseContext(), FolderPickerTest.class);
+        Log.v(this.toString(), "Intent created. Moving to Folder Picker.");
+        startActivityForResult(intent,1 );
+        
 		File root = new File(Environment.getExternalStorageDirectory()
 				.getAbsolutePath());
 		// ListDir(root);
@@ -235,7 +241,24 @@ public class SmartFS extends Activity {
 		}
 
 	}
-
+	
+	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		Log.i("folderPath","Returned to main");
+		super.onActivityResult(requestCode, resultCode, data);
+		if(requestCode == 1 && resultCode == RESULT_OK) {
+			folderPath=data.getStringExtra("folderPath"); 
+			if(folderPath.equals("")){
+				Log.i("folderPath","Cancel");
+			}else{
+				Log.i("folderPath",folderPath);
+			}
+			// do stuff with path
+		}
+		else
+			Log.i("folderPath","Not good!");
+	}
+	
 	/*
 	 * void ListDir(File f) { File[] files = f.listFiles(); fileList.clear();
 	 * for (File file : files) { fileList.add(file.getPath()); }
@@ -455,7 +478,7 @@ class ClientAction extends Thread {
 	public ClientAction(InetAddress ip, String port, String msg) throws IOException {
 		this.destIp = ip;
 		this.port = port;
-		Log.i("Cliuent Action", ip+" "+port);
+		Log.i("Client Action", ip+" "+port);
 /*		try {
 			this.destIp = InetAddress.getByName(ip);
 		} catch (IOException e) {
