@@ -54,14 +54,17 @@ import android.util.Log;
 public class RegisterService extends Thread{
 
     public final static String TAG = "RegisterService";
-    String type,id,name,phoneNo;
+    String type,id,name,phoneNo, ip;
     JmDNS mJmDNS;
-    public RegisterService(JmDNS mJmDNS, String type, String devID,String username,String phoneNo){
+    int tcpPort; 
+    public RegisterService(JmDNS mJmDNS, String type, String devID,String username,String phoneNo, int tcpPort, String iP){
     	this.type = type;
     	this.id = devID;
     	this.name = username;
     	this.phoneNo = phoneNo;
     	this.mJmDNS = mJmDNS;
+    	this.tcpPort = tcpPort;
+    	this.ip = iP;
     }
     /**
      * @param args
@@ -84,6 +87,8 @@ public class RegisterService extends Thread{
             byte[] pair = new byte[8];
             random.nextBytes(pair);
             values.put("Pair", toHex(pair));
+            values.put("TCP Port", Integer.toString(tcpPort));
+            values.put("IP", ip);
             
             Log.i(TAG,"Requesting pairing for " + name);
             SmartFS.setServiceInfo(ServiceInfo.create(type, name, 1025, 0, 0, values));
