@@ -53,6 +53,8 @@ public class SmartFS extends Activity {
 	InetAddress hostName;
 	ServerSocket serverSocket; /* serverSocket.get */
 	ListView listV;
+	InetAddress currIP;
+	String currPort;
 	SparseArray<ServiceInfo> dev;
 	AlertDialog mDialog;
 	Handler handle = new Handler();
@@ -221,25 +223,8 @@ public class SmartFS extends Activity {
 		Intent intent = new Intent(getBaseContext(), FolderPickerTest.class);
         Log.v(this.toString(), "Intent created. Moving to Folder Picker.");
         startActivityForResult(intent,1 );
-        
-		File root = new File(Environment.getExternalStorageDirectory()
-				.getAbsolutePath());
-		// ListDir(root);
-		File[] files = root.listFiles();
-		String dirFileList = null;
-		dirFileList = new String("Directory_List:" + pairKey + ":"
-				+ getPhoneNo() + ":");
-		for (File file : files) {
-			dirFileList = dirFileList.concat(file.getPath() + ",");
-		}
-
-		try {
-			Thread th = new Thread(new ClientAction(ip, port, dirFileList));
-			th.start();
-		} catch (IOException e) {
-			System.out.println("Error in sending passkey");
-		}
-
+        currIP = ip;
+        currPort = port;
 	}
 	
 	@Override
@@ -252,6 +237,12 @@ public class SmartFS extends Activity {
 				Log.i("folderPath","Cancel");
 			}else{
 				Log.i("folderPath",folderPath);
+				try {
+					Thread th = new Thread(new ClientAction(currIP, currPort, folderPath));
+					th.start();
+				} catch (IOException e) {
+					System.out.println("Error in sending passkey");
+				}
 			}
 			// do stuff with path
 		}
