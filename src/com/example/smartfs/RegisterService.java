@@ -78,7 +78,7 @@ public class RegisterService extends Thread{
             Random random = new Random();
             
             final HashMap<String, String> values = new HashMap<String, String>();
-            values.put("DvNm", id);
+            values.put("IMEI", id);
             values.put("RemV", "10000");
             values.put("DvTy", "Android");
             values.put("RemN", "Remote");

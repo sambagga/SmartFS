@@ -11,20 +11,14 @@ public class CreateDatabase extends SQLiteOpenHelper {
 	public static final String COLUMN_Phoneno = "Phoneno";
 	public static final String COLUMN_IMEI = "Imei";
 	public static final String COLUMN_Directory = "path";
-
-	// public static final String TABLE_Directory = "directory";
-	// public static final String COLUMN_P1_X = "P1_X";
-	// public static final String COLUMN_P1_Y = "P1_Y";
-	// public static final String COLUMN_P2_X = "P2_X";
-	// public static final String COLUMN_P2_Y = "P2_Y";
-
+	
 	private static final String DATABASE_NAME = "smartfs.db";
-	private static final int DATABASE_VERSION = 3;
+	private static final int DATABASE_VERSION = 28;
 
 	// Database creation sql statement
 	private static final String DATABASE_CREATE_Paired = "create table "
-			+ TABLE_Paired + "(" + COLUMN_Phoneno + " text primary key,  "
-			+ COLUMN_IMEI + " text," + COLUMN_Directory + "text);";
+			+ TABLE_Paired + "( " + COLUMN_Phoneno + " text ,  "
+			+ COLUMN_IMEI + " text, " + COLUMN_Directory + " text);";
 
 //	private static final String DATABASE_CREATE_Directory = "create table "
 //			+ TABLE_Map + "(" + COLUMN_ID
