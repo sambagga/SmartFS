@@ -13,7 +13,7 @@ public class CreateDatabase extends SQLiteOpenHelper {
 	public static final String COLUMN_Directory = "path";
 	
 	private static final String DATABASE_NAME = "smartfs.db";
-	private static final int DATABASE_VERSION = 28;
+	private static final int DATABASE_VERSION = 33;
 
 	// Database creation sql statement
 	private static final String DATABASE_CREATE_Paired = "create table "

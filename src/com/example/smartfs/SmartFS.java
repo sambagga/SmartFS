@@ -11,6 +11,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -44,6 +45,8 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -54,6 +57,8 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.ViewDebug.FlagToString;
+import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
@@ -66,10 +71,10 @@ public class SmartFS extends Activity {
 	public static InetAddress currentIP;
 	public static String currentPort;
 	public static String currentPhoneNumber;
-	public static InetAddress ipStr = null; 
+	public static InetAddress ipStr = null;
 	public static String pairto = null;
 	volatile public static ServiceInfo[] list;
-	private DataProvider dbProvider;
+	public static DataProvider dbProvider;
 	private String type = "_smartfs._tcp.local.";
 	private static ServiceInfo serviceInfo;
 	JmDNS mJmDNS;
@@ -86,8 +91,6 @@ public class SmartFS extends Activity {
 	Handler handle = new Handler();
 	private List<String> fileList = new ArrayList<String>();
 	List<String[]> pairedList;
-	
-	
 
 	// public static LinkedList<PairedNode> pairedList = new
 	// LinkedList<PairedNode>();
@@ -126,8 +129,9 @@ public class SmartFS extends Activity {
 					long id) {
 				boolean arePaired = false;
 				ServiceInfo s = dev.get((int) id);
-				/*String */pairto = s.getPropertyString("TCP Port");
-				/*InetAddress */ipStr = s.getInet4Addresses()[s.getInet4Addresses().length - 1];
+				/* String */pairto = s.getPropertyString("TCP Port");
+				/* InetAddress */ipStr = s.getInet4Addresses()[s
+						.getInet4Addresses().length - 1];
 				String pairingIMEI = s.getPropertyString("IMEI");
 				String pairingID = s.getPropertyString("PhoneNo");
 				currentPhoneNumber = pairingID;
@@ -168,10 +172,16 @@ public class SmartFS extends Activity {
 					String rootFolder = Environment
 							.getExternalStorageDirectory().getPath()
 							+ "/SmartFS/" + pairingID;
-					Log.i("Moving to file explorer",rootFolder);
-					Intent intentFileExp = new Intent(getBaseContext(), FileChooser.class);
-					intentFileExp.putExtra("filePath",rootFolder );
-			        startActivityForResult(intentFileExp,2);
+					String rpath = dbProvider.getPath(currentPhoneNumber);
+					Log.i("Moving to file explorer", rootFolder+" "+rpath);
+					Intent intentFileExp = new Intent(getBaseContext(),
+							FileChooser.class);
+					intentFileExp.putExtra("filePath", rootFolder);
+					intentFileExp.putExtra("IP_Address", ipStr.getHostAddress().toString());
+					intentFileExp.putExtra("Port", pairto);
+					intentFileExp.putExtra("PhoneNumber", currentPhoneNumber);
+					intentFileExp.putExtra("Path",rpath);
+					startActivityForResult(intentFileExp, 2);
 				}
 			}
 		};
@@ -273,15 +283,11 @@ public class SmartFS extends Activity {
 				}
 			}
 			// do stuff with path
-		} else if (requestCode == 2){
-    		if (resultCode == RESULT_OK) { 
-    			String curPath = data.getStringExtra("GetPath");
-    			String curFile = data.getStringExtra("GetFileName");
-    			Log.i("Back to main","Path:"+curPath+",FileName:"+curFile);
-    			//getting IP/port Address here
-    			Log.i("Send file:","IP: "+ipStr + " Port: " +  pairto);
-    		}
-    	 } else
+		} else if (requestCode == 2) {
+			if (resultCode == RESULT_OK) {
+				
+			}
+		} else
 			Log.i("folderPath", "Not good!");
 	}
 
@@ -368,7 +374,7 @@ public class SmartFS extends Activity {
 			e.printStackTrace();
 		}
 		lock.release();
-		dbProvider.close();
+		// dbProvider.close();
 		super.onStop();
 	}
 
@@ -493,10 +499,12 @@ public class SmartFS extends Activity {
 						// absolutePth to be put in DB
 						Log.i("Get Phone no", phoneNumber + " " + phoneNo);
 						Log.i("New Device found", phoneNumber);
-					
-						dbProvider.insertPairedDevice(phoneNumber,absolutePath);
-						String[] temp = dbProvider.getSelectedDevice(phoneNumber);
-						Log.i("Device",temp[0]+" "+temp[2]);
+
+						dbProvider
+								.insertPairedDevice(phoneNumber, absolutePath);
+						String[] temp = dbProvider
+								.getSelectedDevice(phoneNumber);
+						Log.i("Device", temp[0] + " " + temp[2]);
 						String folderName = dirElement.getAttribute("name");
 
 						for (int i = 0; i < list.getLength(); i++) {
@@ -517,6 +525,39 @@ public class SmartFS extends Activity {
 							}
 						}
 						Log.i("Dir creation done", "");
+					} else if (sreceive.contains("FILE_TRANSFER")) {
+
+						StringTokenizer stok = new StringTokenizer(sreceive,
+								";");
+						String command = stok.nextToken();
+						String localLocation = stok.nextToken();
+						FileInputStream fileStream = new FileInputStream(
+								localLocation);
+
+						long fileSize = fileStream.available();
+						Log.i("File Size ", "" + fileSize);
+						long completed = 0;
+						int step = 0;
+						ObjectOutputStream outStream = new ObjectOutputStream(
+								sock.getOutputStream());
+						byte[] buffer = new byte[1024];
+						step = fileStream.read(buffer);
+						while (completed <= fileSize && step > 0) {
+							Log.i("Sending.....", " " + completed);
+							outStream.write(buffer);
+							outStream.flush();
+							completed += step;
+							step = fileStream.read(buffer);
+						}
+						try {
+							Thread.sleep(2000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						fileStream.close();
+						outStream.close();
+
 					} else if (sreceive.contains("Pair_Device")) {
 
 						/*
@@ -545,7 +586,7 @@ public class SmartFS extends Activity {
 							}
 						});
 
-					}else if (sreceive.contains("HTTP")) {
+					} else if (sreceive.contains("HTTP")) {
 
 						StringTokenizer stok = new StringTokenizer(sreceive,
 								" ");
@@ -554,6 +595,11 @@ public class SmartFS extends Activity {
 						String header = null;
 						int cbSkip = 0;
 						while ((header = in.readLine()) != null) {
+							if (header.isEmpty()) {
+								Log.i("Empty", " ");
+								break;
+							}
+							Log.i("HTTp ", header);
 							if (header.startsWith("Range: bytes=")) {
 								String headerLine = header.substring(13);
 								int charPos = headerLine.indexOf('-');
@@ -577,6 +623,7 @@ public class SmartFS extends Activity {
 						FileInputStream input_ = new FileInputStream(fileName);
 
 						long cbToSend = input_.available() - cbSkip;
+						input_.close();
 						BufferedOutputStream output = new BufferedOutputStream(
 								sock.getOutputStream(), 32 * 1024);
 						output.write(response.getBytes());
