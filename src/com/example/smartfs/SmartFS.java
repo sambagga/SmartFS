@@ -1,18 +1,16 @@
 package com.example.smartfs;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -20,7 +18,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.StringTokenizer;
@@ -31,22 +28,18 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import net.matthaynes.xml.dirlist.XmlDirectoryListing;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-
-import com.example.smartfs.DataProvider;
-
-import net.matthaynes.xml.dirlist.XmlDirectoryListing;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -57,8 +50,6 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.ViewDebug.FlagToString;
-import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
@@ -91,6 +82,7 @@ public class SmartFS extends Activity {
 	Handler handle = new Handler();
 	private List<String> fileList = new ArrayList<String>();
 	List<String[]> pairedList;
+	public static boolean transferComplete = false;
 
 	// public static LinkedList<PairedNode> pairedList = new
 	// LinkedList<PairedNode>();
@@ -129,9 +121,8 @@ public class SmartFS extends Activity {
 					long id) {
 				boolean arePaired = false;
 				ServiceInfo s = dev.get((int) id);
-				/* String */pairto = s.getPropertyString("TCP Port");
-				/* InetAddress */ipStr = s.getInet4Addresses()[s
-						.getInet4Addresses().length - 1];
+				pairto = s.getPropertyString("TCPPort");
+				ipStr = s.getInet4Addresses()[s.getInet4Addresses().length - 1];
 				String pairingIMEI = s.getPropertyString("IMEI");
 				String pairingID = s.getPropertyString("PhoneNo");
 				currentPhoneNumber = pairingID;
@@ -173,14 +164,15 @@ public class SmartFS extends Activity {
 							.getExternalStorageDirectory().getPath()
 							+ "/SmartFS/" + pairingID;
 					String rpath = dbProvider.getPath(currentPhoneNumber);
-					Log.i("Moving to file explorer", rootFolder+" "+rpath);
+					Log.i("Moving to file explorer", rootFolder + " " + rpath);
 					Intent intentFileExp = new Intent(getBaseContext(),
 							FileChooser.class);
 					intentFileExp.putExtra("filePath", rootFolder);
-					intentFileExp.putExtra("IP_Address", ipStr.getHostAddress().toString());
+					intentFileExp.putExtra("IP_Address", ipStr.getHostAddress()
+							.toString());
 					intentFileExp.putExtra("Port", pairto);
 					intentFileExp.putExtra("PhoneNumber", currentPhoneNumber);
-					intentFileExp.putExtra("Path",rpath);
+					intentFileExp.putExtra("Path", rpath);
 					startActivityForResult(intentFileExp, 2);
 				}
 			}
@@ -284,8 +276,9 @@ public class SmartFS extends Activity {
 			}
 			// do stuff with path
 		} else if (requestCode == 2) {
+			Log.i("Returned from File Chooser", "1");
 			if (resultCode == RESULT_OK) {
-				
+				Log.i("Returned from File Chooser", "2");
 			}
 		} else
 			Log.i("folderPath", "Not good!");
@@ -353,10 +346,24 @@ public class SmartFS extends Activity {
 			ArrayAdapter<String> adapter = new ArrayAdapter<String>(
 					getBaseContext(), android.R.layout.simple_list_item_1);
 			dev = new SparseArray<ServiceInfo>();
+			String myPhone = getPhoneNo();
+			Log.i("myPhone", myPhone);
+			int j=0;
 			for (int i = 0; i < list.length; i++) {
-				adapter.add(list[i].getName() + "\n"
-						+ list[i].getPropertyString("PhoneNo"));
-				dev.put(i, list[i]);
+				if (!list[i].getPropertyString("PhoneNo").equals(myPhone)) {
+					String[] temp = dbProvider.getSelectedDevice(list[i]
+							.getPropertyString("PhoneNo"));
+					if (temp != null) {
+						adapter.add(list[i].getName() + "\n"
+								+ list[i].getPropertyString("PhoneNo")
+								+ " Paired");
+					} else {
+						adapter.add(list[i].getName() + "\n"
+								+ list[i].getPropertyString("PhoneNo"));
+					}
+					dev.put(j, list[i]);
+					j++;
+				}
 			}
 			listV.setAdapter(adapter);
 		}
@@ -424,6 +431,11 @@ public class SmartFS extends Activity {
 					Log.i("Message Received", sreceive);
 					if (sreceive.contains("get_root")) {
 						/* Get the MetaData and send to out */
+
+					} else if (sreceive.contains("Transfer_Complete")) {
+						/* Get the MetaData and send to out */
+						Log.i("Transfer", "setting Transfer Complete");
+						transferComplete = true;
 
 					} else if (sreceive.contains("METADATA_TRANSFER")) {
 						/* Get the MetaData and send to out */
@@ -540,6 +552,8 @@ public class SmartFS extends Activity {
 						int step = 0;
 						ObjectOutputStream outStream = new ObjectOutputStream(
 								sock.getOutputStream());
+						outStream.writeLong(fileSize);
+						outStream.flush();
 						byte[] buffer = new byte[1024];
 						step = fileStream.read(buffer);
 						while (completed <= fileSize && step > 0) {
@@ -549,12 +563,14 @@ public class SmartFS extends Activity {
 							completed += step;
 							step = fileStream.read(buffer);
 						}
-						try {
-							Thread.sleep(2000);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+						byte[] buffer1 = new byte[40];
+						ObjectInputStream inStream = new ObjectInputStream(
+								sock.getInputStream());
+						inStream.read(buffer1);
+						// if(buffer1.toString().contains("Transfer_Complete")){}
+
+						Log.i("Transfer", "Exiting While Loop");
+						transferComplete = false;
 						fileStream.close();
 						outStream.close();
 

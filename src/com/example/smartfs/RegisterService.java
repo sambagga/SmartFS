@@ -87,7 +87,7 @@ public class RegisterService extends Thread{
             byte[] pair = new byte[8];
             random.nextBytes(pair);
             values.put("Pair", toHex(pair));
-            values.put("TCP Port", Integer.toString(tcpPort));
+            values.put("TCPPort", Integer.toString(tcpPort));
             values.put("IP", ip);
             
             Log.i(TAG,"Requesting pairing for " + name);
