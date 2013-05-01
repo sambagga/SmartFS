@@ -348,7 +348,7 @@ public class SmartFS extends Activity {
 			dev = new SparseArray<ServiceInfo>();
 			String myPhone = getPhoneNo();
 			Log.i("myPhone", myPhone);
-			int j=0;
+			int j = 0;
 			for (int i = 0; i < list.length; i++) {
 				if (!list[i].getPropertyString("PhoneNo").equals(myPhone)) {
 					String[] temp = dbProvider.getSelectedDevice(list[i]
@@ -403,8 +403,9 @@ public class SmartFS extends Activity {
 					Log.i("PORT number ", "" + ssock.getLocalPort());
 					Thread th = new Thread(new ConnectionHandler(connection));
 					th.start();
-				} catch (IOException e) {
+				} catch (Exception e) {
 					System.err.println("Connetion Accept failed!");
+					e.printStackTrace();
 					continue;
 				}
 			}
@@ -593,11 +594,31 @@ public class SmartFS extends Activity {
 						final int port = remoteAddr.getPort();
 						handle.post(new Runnable() {
 							public void run() {
+								String pairto_ = null;
+								InetAddress ipStr_ = null;
+								String pairingIMEI;
+								String pairingID;
+								
+								for (int i = 0; i < dev.size(); i++) {
+									ServiceInfo s = dev.get((int) i);
+									if (s.getPropertyString("PhoneNo").equals(
+											phoneNo)) {
+										pairto_ = s
+												.getPropertyString("TCPPort");
+										ipStr_ = s
+												.getInet4Addresses()[s
+												.getInet4Addresses().length - 1];
+										pairingIMEI = s
+												.getPropertyString("IMEI");
+										pairingID = s
+												.getPropertyString("PhoneNo");
+									}
+								}
 								initiateTwoButtonAlert("Pairing Request from "
 										+ phoneNo + ", Code " + pairKey, "Yes",
-										"No", ip, Integer.toString(port),
-										Integer.parseInt(pairKey), phoneNo,
-										IMEI);
+										"No", ipStr_, pairto_,
+										Integer.parseInt(pairKey),
+										currentPhoneNumber, IMEI);
 
 							}
 						});
